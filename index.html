@@ -314,37 +314,16 @@ console.log("Supabase connecté", supabaseClient);
   <div id="chat-messages"></div>
 
 	<div class="suggestions" id="suggestions">
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  🤔 Je ne sais pas quoi apporter
-	  </button>
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  💰 Idée à moins de 10 €
-	  </button>
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  ⏱️ Recette en moins de 30 min
-	  </button>
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  🍰 Quel dessert choisir ?
-	  </button>
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  🍷 Quelle boisson apporter ?
-	  </button>
-
-	  <button class="sug-chip"
-			  onclick="sendSuggestion(this.textContent)">
-			  🥗 Que manque-t-il au repas ?
-	  </button>
-
+	  <button class="sug-chip" onclick="handleChefChoice('quoi')">🤔 Je ne sais pas quoi apporter</button>
+	  <button class="sug-chip" onclick="handleChefChoice('entree')">🥗 Entrée</button>
+	  <button class="sug-chip" onclick="handleChefChoice('plat')">🍲 Plat</button>
+	  <button class="sug-chip" onclick="handleChefChoice('dessert')">🍰 Dessert</button>
+	  <button class="sug-chip" onclick="handleChefChoice('boisson')">🍷 Boisson</button>
+	  <button class="sug-chip" onclick="handleChefChoice('rapide')">⏱️ Rapide</button>
+	  <button class="sug-chip" onclick="handleChefChoice('pascher')">💰 Petit budget</button>
+	  <button class="sug-chip" onclick="handleChefChoice('vegetarien')">🌿 Végétarien</button>
+	  <button class="sug-chip" onclick="handleChefChoice('enfant')">👧 Enfants</button>
+	  <button class="sug-chip" onclick="handleChefChoice('sanscuisson')">🧊 Sans cuisson</button>
 	</div>
 
   <div class="chat-input-row">
@@ -699,6 +678,22 @@ RÈGLES
 }
 
 function getLocalChefReply(question) {
+
+const choiceMap = {
+  quoi: "quoi apporter",
+  entree: "entrée apéritif",
+  plat: "plat salé repas",
+  dessert: "dessert sucré gâteau",
+  boisson: "boisson jus soft eau",
+  rapide: "rapide 30 min dernière minute",
+  pascher: "moins de 10 € pas cher budget",
+  vegetarien: "végétarien sans viande",
+  enfant: "enfant enfants",
+  sanscuisson: "sans cuisson pas cuisiner"
+};
+
+question = choiceMap[question] || question;
+
   const q = question.toLowerCase();
 
   const counts = {
@@ -709,107 +704,295 @@ function getLocalChefReply(question) {
     autre: 0
   };
 
-  items.forEach(i => counts[i.cat]++);
+  items.forEach(i => {
+    if (counts[i.cat] !== undefined) counts[i.cat]++;
+  });
 
   const missing = [];
-  if (counts.entree === 0) missing.push("une entrée");
-  if (counts.plat === 0) missing.push("un plat");
-  if (counts.dessert === 0) missing.push("un dessert");
-  if (counts.boisson === 0) missing.push("une boisson");
+  if (counts.entree === 0) missing.push("🥗 entrée");
+  if (counts.plat === 0) missing.push("🍲 plat");
+  if (counts.dessert === 0) missing.push("🍰 dessert");
+  if (counts.boisson === 0) missing.push("🍷 boisson");
 
-  if (q.includes("dessert")) {
-    return `🍰 Je te conseille un **dessert facile à transporter** :
+  const currentItems = items.map(i => i.item.toLowerCase());
 
-- **Tarte aux pommes**
-- **Brownies coupés en parts**
-- **Salade de fruits**
-
-Difficulté : facile  
-Budget : €  
-Temps : 20 à 40 min
-
-C'est pratique pour une auberge espagnole et ça plaît au plus grand nombre.`;
+  function alreadyPlanned(words) {
+    return currentItems.some(item =>
+      words.some(word => item.includes(word))
+    );
   }
 
-  if (q.includes("boisson")) {
-    return `🍷 Pour les boissons, je te conseille :
+  function formatIdeas(title, intro, ideas, conseil) {
+    return `
+${title}
 
-- Eau plate et pétillante
-- Jus de fruits
-- Softs
-- Thé glacé maison
-- Citronnade
+${intro}
 
-Difficulté : très facile  
-Budget : €  
-Temps : 5 min
+${ideas.map(idea => `
+• **${idea.name}**
+  Difficulté : ${idea.level}
+  Budget : ${idea.budget}
+  Temps : ${idea.time}
+  Pourquoi : ${idea.why}
+`).join("")}
 
-C'est souvent ce qu'on oublie dans une auberge espagnole.`;
+${conseil ? `💡 **Conseil Chef Gustave** : ${conseil}` : ""}
+`;
   }
 
-  if (q.includes("moins de 10") || q.includes("10 €")) {
-    return `💰 Idées à moins de 10 € :
-
-- **Cake salé**
-- **Salade de pâtes**
-- **Quiche maison**
-- **Cookies**
-- **Citronnade maison**
-
-Difficulté : facile  
-Budget : €  
-Temps : 20 à 45 min
-
-Le meilleur rapport simplicité/prix est souvent la salade de pâtes.`;
-  }
-
-  if (q.includes("30 min") || q.includes("rapide")) {
-    return `⏱️ En moins de 30 minutes, je te conseille :
-
-- **Wraps apéritifs**
-- **Salade grecque**
-- **Brownies**
-- **Plateau fromage / charcuterie**
-- **Citronnade maison**
-
-Difficulté : facile  
-Budget : € à €€  
-Temps : 10 à 30 min`;
-  }
-
-  if (q.includes("manque") || q.includes("quoi apporter")) {
+  if (q.includes("manque") || q.includes("équilibré") || q.includes("quoi apporter") || q.includes("indécis") || q.includes("sais pas")) {
     if (missing.length > 0) {
-      return `🤔 D'après les contributions actuelles, il manque surtout : **${missing.join(", ")}**.
+      return `
+🤔 D'après les contributions actuelles, il manque surtout : **${missing.join(", ")}**.
 
-Je te recommande en priorité :
+Je te conseille de choisir en priorité la catégorie la moins représentée.
 
-- **${missing[0]}**
-- Facile à transporter
-- Adapté à un repas partagé
-- Peu risqué pour plaire au plus grand nombre`;
+Suggestions rapides :
+
+• **Entrée** : salade de pâtes, cake salé, taboulé, wraps apéritifs  
+• **Plat** : quiche, gratin, chili, lasagnes, tarte salée  
+• **Dessert** : brownies, cookies, tarte aux pommes, salade de fruits  
+• **Boisson** : eau, jus, softs, citronnade, thé glacé maison  
+
+💡 Le meilleur choix est souvent : **quelque chose de simple, transportable et facile à partager**.
+`;
     }
 
-    return `✅ Le repas semble déjà bien équilibré.
+    return `
+✅ Le repas semble déjà bien équilibré.
 
-Tu peux apporter :
+Tu peux apporter un complément utile :
 
-- une boisson originale
-- un dessert simple
-- du pain
-- une option végétarienne
-- quelque chose pour l'apéritif`;
+• Pain frais  
+• Fromage  
+• Sauce maison  
+• Boisson fraîche  
+• Dessert léger  
+• Option végétarienne  
+• Fruits  
+• Serviettes / gobelets / glaçons  
+
+💡 Quand tout est déjà équilibré, une boisson ou un dessert simple est rarement une mauvaise idée.
+`;
   }
 
-  return `👨‍🍳 Je peux t'aider à choisir.
+  if (q.includes("entrée") || q.includes("entree") || q.includes("apéritif") || q.includes("apero") || q.includes("apéro")) {
+    return formatIdeas(
+      "🥗 Idées d'entrées / apéritifs",
+      "Voici des idées simples, conviviales et faciles à transporter :",
+      [
+        { name: "Cake salé jambon-fromage ou légumes", level: "Facile", budget: "€", time: "45 min", why: "se coupe en parts et plaît à beaucoup de monde" },
+        { name: "Taboulé maison", level: "Facile", budget: "€", time: "25 min", why: "frais, économique et pratique en grande quantité" },
+        { name: "Wraps apéritifs coupés en rondelles", level: "Facile", budget: "€€", time: "20 min", why: "joli visuellement et facile à manger debout" },
+        { name: "Salade grecque", level: "Facile", budget: "€€", time: "20 min", why: "fraîche, colorée et idéale avec des plats plus lourds" },
+        { name: "Mini quiches", level: "Moyen", budget: "€€", time: "40 min", why: "se mange chaud ou froid" }
+      ],
+      "Si personne n'a encore prévu d'entrée, le taboulé ou les wraps sont d'excellents choix."
+    );
+  }
+
+  if (q.includes("plat") || q.includes("salé") || q.includes("sale") || q.includes("repas")) {
+    return formatIdeas(
+      "🍲 Idées de plats à partager",
+      "Pour une auberge espagnole, il faut un plat simple à servir et facile à transporter :",
+      [
+        { name: "Lasagnes maison", level: "Moyen", budget: "€€", time: "1h15", why: "plat généreux, familial et très apprécié" },
+        { name: "Quiche lorraine ou végétarienne", level: "Facile", budget: "€", time: "45 min", why: "se transporte facilement et se mange chaud ou froid" },
+        { name: "Chili con carne ou chili végétarien", level: "Moyen", budget: "€€", time: "1h", why: "facile à faire en grande quantité" },
+        { name: "Gratin de pâtes", level: "Facile", budget: "€", time: "45 min", why: "économique, rassasiant et simple" },
+        { name: "Tarte salée tomates-moutarde", level: "Facile", budget: "€", time: "35 min", why: "rapide, bon marché et efficace" }
+      ],
+      alreadyPlanned(["quiche", "tarte", "lasagne"]) ? "Un plat similaire semble déjà prévu, choisis plutôt un accompagnement ou une boisson." : "La quiche est le choix le plus sûr si tu veux quelque chose de simple."
+    );
+  }
+
+  if (q.includes("dessert") || q.includes("sucré") || q.includes("sucre") || q.includes("gâteau") || q.includes("gateau")) {
+    return formatIdeas(
+      "🍰 Idées de desserts",
+      "Voici des desserts faciles à partager :",
+      [
+        { name: "Brownies coupés en carrés", level: "Facile", budget: "€", time: "35 min", why: "facile à transporter et à servir" },
+        { name: "Cookies maison", level: "Facile", budget: "€", time: "30 min", why: "pratique, économique et apprécié des enfants" },
+        { name: "Tarte aux pommes", level: "Facile", budget: "€", time: "45 min", why: "classique, simple et efficace" },
+        { name: "Salade de fruits", level: "Facile", budget: "€€", time: "25 min", why: "léger et frais après un repas copieux" },
+        { name: "Tiramisu en grand plat", level: "Moyen", budget: "€€", time: "30 min + repos", why: "convivial et très gourmand" }
+      ],
+      "Pour éviter les risques, prends un dessert qui se coupe facilement en parts."
+    );
+  }
+
+  if (q.includes("boisson") || q.includes("boire") || q.includes("jus") || q.includes("soft") || q.includes("eau")) {
+    return formatIdeas(
+      "🍷 Idées de boissons",
+      "Les boissons sont souvent oubliées dans les repas partagés :",
+      [
+        { name: "Eau plate + eau pétillante", level: "Très facile", budget: "€", time: "5 min", why: "indispensable pour tout le monde" },
+        { name: "Jus de fruits variés", level: "Très facile", budget: "€", time: "5 min", why: "convient aux adultes et aux enfants" },
+        { name: "Citronnade maison", level: "Facile", budget: "€", time: "15 min", why: "rafraîchissant et original" },
+        { name: "Thé glacé maison", level: "Facile", budget: "€", time: "20 min", why: "peu sucré et agréable" },
+        { name: "Softs variés", level: "Très facile", budget: "€€", time: "5 min", why: "solution simple et sûre" }
+      ],
+      "Si aucune boisson n'est prévue, c'est probablement le meilleur choix à apporter."
+    );
+  }
+
+  if (q.includes("moins de 10") || q.includes("10€") || q.includes("10 €") || q.includes("pas cher") || q.includes("budget")) {
+    return formatIdeas(
+      "💰 Idées économiques",
+      "Voici des idées à petit budget :",
+      [
+        { name: "Salade de pâtes", level: "Facile", budget: "€", time: "25 min", why: "très économique et nourrissant" },
+        { name: "Cake salé", level: "Facile", budget: "€", time: "45 min", why: "peu coûteux et facile à partager" },
+        { name: "Cookies maison", level: "Facile", budget: "€", time: "30 min", why: "ingrédients simples et peu chers" },
+        { name: "Tarte salée", level: "Facile", budget: "€", time: "35 min", why: "bon rapport quantité/prix" },
+        { name: "Citronnade maison", level: "Facile", budget: "€", time: "15 min", why: "originale et économique" }
+      ],
+      "Le meilleur choix petit budget reste la salade de pâtes."
+    );
+  }
+
+  if (q.includes("rapide") || q.includes("30 min") || q.includes("vite") || q.includes("dernière minute") || q.includes("derniere minute")) {
+    return formatIdeas(
+      "⏱️ Idées rapides",
+      "Voici des idées prêtes en moins de 30 minutes :",
+      [
+        { name: "Wraps apéritifs", level: "Facile", budget: "€€", time: "15 min", why: "rapide, joli et pratique" },
+        { name: "Salade grecque", level: "Facile", budget: "€€", time: "20 min", why: "frais et sans cuisson" },
+        { name: "Plateau fromage", level: "Très facile", budget: "€€", time: "10 min", why: "aucune cuisson et très convivial" },
+        { name: "Salade de fruits", level: "Facile", budget: "€€", time: "20 min", why: "léger et simple" },
+        { name: "Boissons fraîches", level: "Très facile", budget: "€", time: "5 min", why: "toujours utile" }
+      ],
+      "En dernière minute, apporte une boisson ou un plateau à partager."
+    );
+  }
+
+  if (q.includes("végétarien") || q.includes("vegetarien") || q.includes("sans viande")) {
+    return formatIdeas(
+      "🌿 Idées végétariennes",
+      "Voici des options sans viande adaptées à un repas partagé :",
+      [
+        { name: "Quiche légumes-fromage", level: "Facile", budget: "€", time: "45 min", why: "simple, rassasiant et transportable" },
+        { name: "Taboulé", level: "Facile", budget: "€", time: "25 min", why: "frais et économique" },
+        { name: "Houmous + pain pita", level: "Facile", budget: "€", time: "15 min", why: "parfait pour l'apéritif" },
+        { name: "Salade de lentilles", level: "Facile", budget: "€", time: "30 min", why: "nourrissant et équilibré" },
+        { name: "Cake courgette-feta", level: "Facile", budget: "€€", time: "45 min", why: "original et facile à couper" }
+      ],
+      "Prévois une étiquette “végétarien” pour que tout le monde le voie facilement."
+    );
+  }
+
+  if (q.includes("enfant") || q.includes("enfants")) {
+    return formatIdeas(
+      "👧 Idées appréciées des enfants",
+      "Voici des choix simples qui plaisent souvent aux enfants :",
+      [
+        { name: "Mini pizzas", level: "Facile", budget: "€€", time: "35 min", why: "format ludique et facile à manger" },
+        { name: "Cookies", level: "Facile", budget: "€", time: "30 min", why: "valeur sûre" },
+        { name: "Brownies", level: "Facile", budget: "€", time: "35 min", why: "gourmand et facile à partager" },
+        { name: "Brochettes de fruits", level: "Facile", budget: "€€", time: "25 min", why: "coloré et amusant" },
+        { name: "Jus de fruits", level: "Très facile", budget: "€", time: "5 min", why: "pratique pour les enfants" }
+      ],
+      "Évite les plats trop épicés si des enfants participent."
+    );
+  }
+
+  if (q.includes("sans cuisson") || q.includes("pas cuisiner") || q.includes("nul en cuisine")) {
+    return formatIdeas(
+      "🧊 Idées sans cuisson",
+      "Pas besoin d'être un grand cuisinier :",
+      [
+        { name: "Plateau de fromages", level: "Très facile", budget: "€€", time: "10 min", why: "convivial et sans préparation complexe" },
+        { name: "Pain + dips + houmous", level: "Très facile", budget: "€", time: "10 min", why: "parfait pour l'apéritif" },
+        { name: "Salade composée", level: "Facile", budget: "€€", time: "20 min", why: "frais et adaptable" },
+        { name: "Fruits découpés", level: "Facile", budget: "€€", time: "15 min", why: "léger et apprécié" },
+        { name: "Boissons", level: "Très facile", budget: "€", time: "5 min", why: "toujours utile" }
+      ],
+      "Si tu ne veux vraiment pas cuisiner, prends les boissons ou un plateau apéritif."
+    );
+  }
+
+  return `
+👨‍🍳 Je peux t'aider à choisir quoi apporter.
 
 Dis-moi simplement :
 
-- ton budget
-- ton temps disponible
-- ton niveau en cuisine
-- si tu préfères sucré ou salé
+• ton budget  
+• ton temps disponible  
+• ton niveau en cuisine  
+• si tu préfères sucré ou salé  
+• s'il y a des enfants ou des régimes particuliers  
 
-Et je te proposerai 2 ou 3 idées adaptées.`;
+Exemples de questions :
+
+• “Je veux un dessert facile”  
+• “Je veux une idée à moins de 10 €”  
+• “Que manque-t-il au repas ?”  
+• “Je veux une boisson originale”  
+• “Je ne sais pas quoi apporter”  
+`;
+}
+
+function handleChefChoice(choice) {
+  const labels = {
+    quoi: "🤔 Je ne sais pas quoi apporter",
+    entree: "🥗 Entrée",
+    plat: "🍲 Plat",
+    dessert: "🍰 Dessert",
+    boisson: "🍷 Boisson",
+    rapide: "⏱️ Rapide",
+    pascher: "💰 Petit budget",
+    vegetarien: "🌿 Végétarien",
+    enfant: "👧 Enfants",
+    sanscuisson: "🧊 Sans cuisson"
+  };
+
+  addUserMessage(labels[choice]);
+
+  const reply = getLocalChefReply(choice);
+  addAiMessage(reply);
+
+  chatHistory.push({ role: "user", content: labels[choice] });
+  chatHistory.push({ role: "assistant", content: reply });
+
+  loadItems();
+
+  document.getElementById("suggestions").style.display = "none";
+
+  setTimeout(() => {
+    showChefRestartButton();
+  }, 400);
+}
+
+
+function showChefRestartButton() {
+  const suggestions = document.getElementById("suggestions");
+
+  suggestions.innerHTML = `
+    <button class="sug-chip" onclick="resetChefChoices()">
+      🔄 Poser une autre question
+    </button>
+  `;
+
+  suggestions.style.display = "flex";
+}
+
+function resetChefChoices() {
+  const suggestions = document.getElementById("suggestions");
+
+  suggestions.innerHTML = `
+    <button class="sug-chip" onclick="handleChefChoice('quoi')">🤔 Je ne sais pas quoi apporter</button>
+    <button class="sug-chip" onclick="handleChefChoice('entree')">🥗 Entrée</button>
+    <button class="sug-chip" onclick="handleChefChoice('plat')">🍲 Plat</button>
+    <button class="sug-chip" onclick="handleChefChoice('dessert')">🍰 Dessert</button>
+    <button class="sug-chip" onclick="handleChefChoice('boisson')">🍷 Boisson</button>
+    <button class="sug-chip" onclick="handleChefChoice('rapide')">⏱️ Rapide</button>
+    <button class="sug-chip" onclick="handleChefChoice('pascher')">💰 Petit budget</button>
+    <button class="sug-chip" onclick="handleChefChoice('vegetarien')">🌿 Végétarien</button>
+    <button class="sug-chip" onclick="handleChefChoice('enfant')">👧 Enfants</button>
+    <button class="sug-chip" onclick="handleChefChoice('sanscuisson')">🧊 Sans cuisson</button>
+  `;
+
+  suggestions.style.display = "flex";
 }
 
 async function sendChat() {
@@ -850,10 +1033,13 @@ async function sendChat() {
   const localReply = getLocalChefReply(text);
 
   addAiMessage(localReply);
+
   chatHistory.push({
     role: 'assistant',
     content: localReply
   });
+
+  await loadItems();
 }
 
   isTyping = false;
