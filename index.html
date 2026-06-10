@@ -446,10 +446,13 @@ async function addItem() {
 
     await loadItems();
 
-  } catch (error) {
-    console.error('Erreur Supabase addItem:', error);
-    alert("Erreur : la contribution n'a pas été enregistrée dans Supabase.");
-  }
+	} catch (error) {
+	  console.error('Erreur Supabase complète:', error);
+	  alert(
+		"Erreur Supabase : " +
+		(error.message || JSON.stringify(error))
+	  );
+	}
 }
 
 async function deleteItem(id) {
