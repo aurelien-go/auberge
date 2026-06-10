@@ -787,34 +787,6 @@ function renderMarkdown(text) {
     .replace(/\n/g,'<br>');
 }
 
-function getMealBalance() {
-
-  const counts = {
-    entree:0,
-    plat:0,
-    dessert:0,
-    boisson:0
-  };
-
-  items.forEach(item => {
-    if(counts[item.cat] !== undefined){
-      counts[item.cat]++;
-    }
-  });
-
-  const missing = [];
-
-  if(counts.entree === 0) missing.push("🥗 Entrées");
-  if(counts.plat === 0) missing.push("🍲 Plats");
-  if(counts.dessert === 0) missing.push("🍰 Desserts");
-  if(counts.boisson === 0) missing.push("🍷 Boissons");
-
-  return {
-    counts,
-    missing
-  };
-}
-
 /* ════════════════════════════════════════
    INIT
 ════════════════════════════════════════ */
