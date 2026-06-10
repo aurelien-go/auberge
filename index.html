@@ -698,6 +698,120 @@ RÈGLES
 `;
 }
 
+function getLocalChefReply(question) {
+  const q = question.toLowerCase();
+
+  const counts = {
+    entree: 0,
+    plat: 0,
+    dessert: 0,
+    boisson: 0,
+    autre: 0
+  };
+
+  items.forEach(i => counts[i.cat]++);
+
+  const missing = [];
+  if (counts.entree === 0) missing.push("une entrée");
+  if (counts.plat === 0) missing.push("un plat");
+  if (counts.dessert === 0) missing.push("un dessert");
+  if (counts.boisson === 0) missing.push("une boisson");
+
+  if (q.includes("dessert")) {
+    return `🍰 Je te conseille un **dessert facile à transporter** :
+
+- **Tarte aux pommes**
+- **Brownies coupés en parts**
+- **Salade de fruits**
+
+Difficulté : facile  
+Budget : €  
+Temps : 20 à 40 min
+
+C'est pratique pour une auberge espagnole et ça plaît au plus grand nombre.`;
+  }
+
+  if (q.includes("boisson")) {
+    return `🍷 Pour les boissons, je te conseille :
+
+- Eau plate et pétillante
+- Jus de fruits
+- Softs
+- Thé glacé maison
+- Citronnade
+
+Difficulté : très facile  
+Budget : €  
+Temps : 5 min
+
+C'est souvent ce qu'on oublie dans une auberge espagnole.`;
+  }
+
+  if (q.includes("moins de 10") || q.includes("10 €")) {
+    return `💰 Idées à moins de 10 € :
+
+- **Cake salé**
+- **Salade de pâtes**
+- **Quiche maison**
+- **Cookies**
+- **Citronnade maison**
+
+Difficulté : facile  
+Budget : €  
+Temps : 20 à 45 min
+
+Le meilleur rapport simplicité/prix est souvent la salade de pâtes.`;
+  }
+
+  if (q.includes("30 min") || q.includes("rapide")) {
+    return `⏱️ En moins de 30 minutes, je te conseille :
+
+- **Wraps apéritifs**
+- **Salade grecque**
+- **Brownies**
+- **Plateau fromage / charcuterie**
+- **Citronnade maison**
+
+Difficulté : facile  
+Budget : € à €€  
+Temps : 10 à 30 min`;
+  }
+
+  if (q.includes("manque") || q.includes("quoi apporter")) {
+    if (missing.length > 0) {
+      return `🤔 D'après les contributions actuelles, il manque surtout : **${missing.join(", ")}**.
+
+Je te recommande en priorité :
+
+- **${missing[0]}**
+- Facile à transporter
+- Adapté à un repas partagé
+- Peu risqué pour plaire au plus grand nombre`;
+    }
+
+    return `✅ Le repas semble déjà bien équilibré.
+
+Tu peux apporter :
+
+- une boisson originale
+- un dessert simple
+- du pain
+- une option végétarienne
+- quelque chose pour l'apéritif`;
+  }
+
+  return `👨‍🍳 Je peux t'aider à choisir.
+
+Dis-moi simplement :
+
+- ton budget
+- ton temps disponible
+- ton niveau en cuisine
+- si tu préfères sucré ou salé
+
+Et je te proposerai 2 ou 3 idées adaptées.`;
+}
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -730,10 +844,17 @@ async function sendChat() {
     removeTyping();
     addAiMessage(reply);
     chatHistory.push({ role: 'assistant', content: reply });
-  } catch(e) {
-    removeTyping();
-    addAiMessage("Oups, une erreur est survenue. Vérifiez votre connexion et réessayez 🙏");
-  }
+} catch(e) {
+  removeTyping();
+
+  const localReply = getLocalChefReply(text);
+
+  addAiMessage(localReply);
+  chatHistory.push({
+    role: 'assistant',
+    content: localReply
+  });
+}
 
   isTyping = false;
   document.getElementById('chat-send').disabled = false;
