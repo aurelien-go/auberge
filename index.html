@@ -379,6 +379,14 @@ async function saveItem(item) {
 async function loadItems() {
   const grid = document.getElementById('cards-grid');
 
+  // Affichage immédiat
+  grid.innerHTML = `
+    <div id="empty-state">
+      <div class="big">⏳</div>
+      <p>Chargement des contributions...</p>
+    </div>
+  `;
+
   try {
     const { data, error } = await supabaseClient
       .from('contributions')
@@ -392,15 +400,21 @@ async function loadItems() {
 
   } catch (error) {
     console.error('Erreur Supabase loadItems:', error);
+
+    items = [];
+    render();
+
     grid.innerHTML = `
       <div id="empty-state">
         <div class="big">⚠️</div>
-        <p>Impossible de charger les contributions.<br>Vérifiez la connexion Supabase et les règles RLS.</p>
+        <p>
+          Impossible de charger les contributions.<br>
+          ${error.message || 'Vérifiez Supabase.'}
+        </p>
       </div>
     `;
   }
 }
-
 
 /* ════════════════════════════════════════
    ADD / DELETE
@@ -818,20 +832,22 @@ if(balance.missing.length){
 /* ════════════════════════════════════════
    INIT
 ════════════════════════════════════════ */
-supabaseClient
-  .channel('contributions-changes')
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'contributions'
-    },
-    () => loadItems()
-  )
-  .subscribe();
+document.addEventListener('DOMContentLoaded', () => {
+  loadItems();
 
-loadItems();
+  supabaseClient
+    .channel('contributions-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'contributions'
+      },
+      () => loadItems()
+    )
+    .subscribe();
+});
 
 </script>
 </body>
