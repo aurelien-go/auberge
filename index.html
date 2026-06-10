@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js">
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 const SUPABASE_URL = "https://kmrangasmegijhqnhper.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_q2ee9rXs1wU-s51hHc1cDw_3gZ5axAo";
+const SUPABASE_ANON_KEY = "TA_CLE_PUBLISHABLE";
 
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
-
+console.log("Supabase connecté", supabaseClient);
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -370,7 +370,7 @@ const CAT_LABELS = { entree:'🥗 Entrée', plat:'🍲 Plat', dessert:'🍰 Dess
 ════════════════════════════════════════ */
 async function saveItem(item) {
 
-  await supabase
+  await supabaseClient
     .from('contributions')
     .insert(item);
 
@@ -814,20 +814,6 @@ function getMealBalance() {
     missing
   };
 }
-
-const balance = getMealBalance();
-
-if(balance.missing.length){
-
-  html += `
-    <div class="stat-chip">
-      ⚠️ Manque :
-      <b>${balance.missing.join(', ')}</b>
-    </div>
-  `;
-}
-
-/* console.log(supabase); */
 
 /* ════════════════════════════════════════
    INIT
