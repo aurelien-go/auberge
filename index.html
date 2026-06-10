@@ -2,10 +2,15 @@
 <html lang="fr">
 <head>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js">
-const supabase = window.supabase.createClient(
-  'https://kmrangasmegijhqnhper.supabase.co',
-  'sb_publishable_q2ee9rXs1wU-s51hHc1cDw_3gZ5axAo'
+
+const SUPABASE_URL = "https://kmrangasmegijhqnhper.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_q2ee9rXs1wU-s51hHc1cDw_3gZ5axAo";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
+
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -372,15 +377,28 @@ async function saveItem(item) {
 }
 
 async function loadItems() {
+  const grid = document.getElementById('cards-grid');
 
-  const { data } = await supabase
-    .from('contributions')
-    .select('*')
-    .order('created_at');
+  try {
+    const { data, error } = await supabaseClient
+      .from('contributions')
+      .select('*')
+      .order('created_at', { ascending: true });
 
-  items = data || [];
+    if (error) throw error;
 
-  render();
+    items = data || [];
+    render();
+
+  } catch (error) {
+    console.error('Erreur Supabase loadItems:', error);
+    grid.innerHTML = `
+      <div id="empty-state">
+        <div class="big">⚠️</div>
+        <p>Impossible de charger les contributions.<br>Vérifiez la connexion Supabase et les règles RLS.</p>
+      </div>
+    `;
+  }
 }
 
 
@@ -392,21 +410,84 @@ async function addItem() {
   const item = document.getElementById('inp-item').value.trim();
   const cat  = document.getElementById('inp-cat').value;
   const note = document.getElementById('inp-note').value.trim();
-  if (!name) { flash(document.getElementById('inp-name'), "Merci d'entrer votre prénom"); return; }
-  if (!item) { flash(document.getElementById('inp-item'), "Que voulez-vous apporter ?"); return; }
-  items.push({ id: Date.now()+Math.random().toString(36).slice(2), name, item, cat, note, ts: Date.now() });
-  await saveItems();
-  document.getElementById('inp-item').value = '';
-  document.getElementById('inp-note').value = '';
-  const msg = document.getElementById('success-msg');
-  msg.style.display = 'block';
-  setTimeout(() => msg.style.display = 'none', 2400);
-  render();
+
+  if (!name) {
+    flash(document.getElementById('inp-name'), "Merci d'entrer votre prénom");
+    return;
+  }
+
+  if (!item) {
+    flash(document.getElementById('inp-item'), "Que voulez-vous apporter ?");
+    return;
+  }
+
+  const contribution = {
+    id: String(Date.now()) + Math.random().toString(36).slice(2),
+    name,
+    item,
+    cat,
+    note,
+    ts: Date.now()
+  };
+
+  try {
+    const { error } = await supabaseClient
+      .from('contributions')
+      .insert([contribution]);
+
+    if (error) throw error;
+
+    document.getElementById('inp-item').value = '';
+    document.getElementById('inp-note').value = '';
+
+    const msg = document.getElementById('success-msg');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 2400);
+
+    await loadItems();
+
+  } catch (error) {
+    console.error('Erreur Supabase addItem:', error);
+    alert("Erreur : la contribution n'a pas été enregistrée dans Supabase.");
+  }
 }
-async function deleteItem(id) { items = items.filter(i => i.id !== id); await saveItems(); render(); }
+
+async function deleteItem(id) {
+  try {
+    const { error } = await supabaseClient
+      .from('contributions')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    await loadItems();
+
+  } catch (error) {
+    console.error('Erreur Supabase deleteItem:', error);
+    alert("Erreur : impossible de supprimer cette contribution.");
+  }
+}
+
+
+
 async function clearAll() {
   if (!confirm('Effacer toutes les contributions ?')) return;
-  items = []; await saveItems(); render();
+
+  try {
+    const { error } = await supabaseClient
+      .from('contributions')
+      .delete()
+      .neq('id', '');
+
+    if (error) throw error;
+
+    await loadItems();
+
+  } catch (error) {
+    console.error('Erreur Supabase clearAll:', error);
+    alert("Erreur : impossible d'effacer les contributions.");
+  }
 }
 
 /* ════════════════════════════════════════
@@ -734,7 +815,21 @@ if(balance.missing.length){
 /* ════════════════════════════════════════
    INIT
 ════════════════════════════════════════ */
+supabaseClient
+  .channel('contributions-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'contributions'
+    },
+    () => loadItems()
+  )
+  .subscribe();
+
 loadItems();
+
 </script>
 </body>
 </html>
