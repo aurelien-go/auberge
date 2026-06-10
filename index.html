@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js">
+const supabase = window.supabase.createClient(
+  'https://kmrangasmegijhqnhper.supabase.co',
+  'sb_publishable_q2ee9rXs1wU-s51hHc1cDw_3gZ5axAo'
+);
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Auberge Espagnole 🍽️</title>
@@ -357,13 +363,26 @@ const CAT_LABELS = { entree:'🥗 Entrée', plat:'🍲 Plat', dessert:'🍰 Dess
 /* ════════════════════════════════════════
    STORAGE
 ════════════════════════════════════════ */
-async function saveItems() {
-  try { await window.storage.set(STORAGE_KEY, JSON.stringify(items)); } catch(e) {}
+async function saveItem(item) {
+
+  await supabase
+    .from('contributions')
+    .insert(item);
+
 }
+
 async function loadItems() {
-  try { const r = await window.storage.get(STORAGE_KEY); items = r ? JSON.parse(r.value) : []; } catch(e) { items = []; }
+
+  const { data } = await supabase
+    .from('contributions')
+    .select('*')
+    .order('created_at');
+
+  items = data || [];
+
   render();
 }
+
 
 /* ════════════════════════════════════════
    ADD / DELETE
@@ -709,6 +728,8 @@ if(balance.missing.length){
     </div>
   `;
 }
+
+/* console.log(supabase); */
 
 /* ════════════════════════════════════════
    INIT
